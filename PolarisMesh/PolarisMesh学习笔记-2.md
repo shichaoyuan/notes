@@ -284,3 +284,61 @@ GET /naming/v1/platforms
 }%
 ```
 
+## 4. admin 接口
+
+PolarisMesh 控制面只提供了 HTTP 协议的 admin 接口，也是实现在 `apiserver/httpserver/` 目录下。
+
+目前提供的运维接口不多：
+```
+GET /maintain/v1/apiserver/conn
+GET /maintain/v1/apiserver/conn/stats
+POST /maintain/v1/apiserver/conn/close
+POST /maintain/v1/memory/free
+POST /maintain/v1/instance/clean
+GET /maintain/v1/instance/heartbeat
+```
+
+提供的运维能力主要有：管理 apiserver 的连接（只有开启了 connLimit 才能使用），主动释放内存，清理已注销实例的信息和查询实例心跳信息。
+
+```
+// 清理 EchoServerJava 的注销实例
+❯ curl -H 'Content-Type: application/json' -X POST -d '{"service": "EchoServerJava", "namespace": "default", "host": "127.0.0.1", "port": 15800}' 'http://127.0.0.1:8090/maintain/v1/instance/clean'
+
+{
+ "code": 200000,
+ "info": "execute success",
+ "client": null,
+ "namespace": null,
+ "service": null,
+ "instance": {
+  "id": null,
+  "service": "EchoServerJava",
+  "namespace": "default",
+  "vpc_id": null,
+  "host": "127.0.0.1",
+  "port": 15800,
+  "protocol": null,
+  "version": null,
+  "priority": null,
+  "weight": null,
+  "enableHealthCheck": null,
+  "healthCheck": null,
+  "healthy": null,
+  "isolate": null,
+  "location": null,
+  "metadata": {
+  },
+  "logic_set": null,
+  "ctime": null,
+  "mtime": null,
+  "revision": null,
+  "service_token": null
+ },
+ "routing": null,
+ "alias": null,
+ "rateLimit": null,
+ "circuitBreaker": null,
+ "configRelease": null,
+ "platform": null
+}%
+```

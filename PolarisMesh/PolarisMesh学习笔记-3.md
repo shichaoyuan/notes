@@ -41,8 +41,28 @@ service_token // 认证信息，需要鉴权时设置
 
 ![](./assets/polaris-bc-1.png)
 
+在批处理的 `batch.registerHandler` 处理逻辑中有个小 BUG，没有在事务中对服务加共享锁（对应串行处理中的 `rlockServiceWithID`），极端情况下会有产生脏数据的风险。
+
+**关于隔离的问题**
+
+在数据表 instance 中是通过 isolate 字段标识实例是否隔离，所以在注册流程中首先会通过 instance id 查询实例是否存在，如果已存在并且是隔离状态，那么需要继续保持隔离状态。管理台是通过 /instances/isolate/host 这个 http 接口进行隔离相关的操作，每次对实例进行操作都会更新 revision 字段，实现方式是 UUID，表示 instance 信息（包含 instance、health_check 和 instance_metadata 这三张表）的版本。
+
+返回的消息是 `Response`，字段很多，对于注册这个场景使用这三个字段，
+```
+code //六位状态码，前三位参照 HTTP Status，后三位业务自定义
+info
+instance // 实例信息（带上了id）
+```
 
 ### 1.2 注销
+
+注册调的 GRPC 方法是 `rpc DeregisterInstance(Instance) returns(Response)`。
+
+请求参数是也是 `Instance`，对于注销这个场景，
+```
+
+```
+
 
 ## 2. 监控检查
 
