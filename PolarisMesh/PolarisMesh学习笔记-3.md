@@ -144,6 +144,29 @@ healthcheck 配置与`healthcheck.Server` 数据结构的对应关系不太清�
 
 这里我们看一下缓存更新的逻辑，这部分代码在 `service/healthcheck/cache.go` 中。
 
+![](./assets/polaris-heartbeat-3.png)
+
+`healthcheck.CacheProvider` 中的缓存更新依赖 cache 模块的增量事件。
+
+收到增量的 instance 数据后，主要有两个动作：
+
+1. 更新 CacheProvider 中的 `healthCheckInstances` 、`selfServiceInstances` 这两个 shardMap；（polaris.checker也会做为一个服务注册到 PolarisMesh）
+2. 向 dispatcher 发送 `healthCheckInstancesChanged`、`selfServiceInstancesChanged`这两个 event。
+
+
+
+#### 2.2.2 timeAdjuster
+
+在调用最后一步`checker.Report`之前，
+
+
+
+### 2.3 心跳检查
+
+
+
+
+
 
 
 
