@@ -59,7 +59,7 @@ PolarisMesh Java SDK 以 plugin 的形式管理 SDK 的各种功能。
 
 如果要启用 SERVICE_DISCOVER_CLUSTER 发现模式，那么需要配置好 global.system.discoverCluster，其中必须包含 namespace 和 service，并且 sameAsBuiltin 为 false。
 
-
+![](./assets/polaris-javasdk-service-discover-cluster.png)
 
 
 
