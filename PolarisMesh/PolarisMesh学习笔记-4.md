@@ -21,11 +21,7 @@ rpc Discover(stream DiscoverRequest) returns(stream DiscoverResponse) {}
 
 ### 0.1 ServerConnector & LocalRegistry
 
-PolarisMesh Java SDK 以 plugin 的形式管理 SDK 的各种功能。
-
-![](./assets/polaris-javasdk-plugin.png)
-
-其中  `ServerConnector` 的默认实现类是 `GrpcConnector`，主要提供了与控制面的连接维护以及交互逻辑；`LocalRegistry` 的默认实现类是 `InMemoryRegistry` 封装了资源的本地缓存逻辑，上面已经提到服务、实例和规则等在这里都抽象为资源。
+PolarisMesh Java SDK 以 plugin 的形式管理 SDK 的各种功能，例如`ServerConnector`和`LocalRegistry`。其中  `ServerConnector` 的默认实现类是 `GrpcConnector`，主要提供了与控制面的连接维护以及交互逻辑；`LocalRegistry` 的默认实现类是 `InMemoryRegistry` 封装了资源的本地缓存逻辑，上面已经提到服务、实例和规则等在这里都抽象为资源。
 
 在构建 `SDKContext` 会通过 SPI 机制构建 plugins，然后在上下文初始化时调用 plugin 实现的 `postContextInit` 方法进行初始化。
 
@@ -61,17 +57,62 @@ PolarisMesh Java SDK 以 plugin 的形式管理 SDK 的各种功能。
 
 ![](./assets/polaris-javasdk-service-discover-cluster.png)
 
-
-
-
-
-
-
-
+逻辑很清晰，首次执行的`GrpcServiceUpdateTask` 收到响应后会由 Type.FIRST 转为 Type.LONG_RUNNING，并加入到 connector 的 `updateTaskSet`，然后就能通过 updateServiceExecutor 周期性更新。
 
 
 
 ### 0.3 服务实例 DiscoverRequest 发起流程
+
+核心逻辑与上述一致，以 `getAllInstance `为例看一下。（`getOneInstance`和`getInstances`多了一些路由规则逻辑，下一篇文章详解）
+
+![](./assets/polaris-javasdk-service-discover-all.png)
+
+都是使用 `BaseFlow.syncGetResources` 这个封装入口。
+
+
+
+### 0.4 DiscoverRequest 请求
+
+```protobuf
+message DiscoverRequest {
+	enum DiscoverRequestType {
+		UNKNOWN = 0;
+		INSTANCE = 1;
+		CLUSTER = 2;
+		ROUTING = 3;
+		RATE_LIMIT = 4;
+		CIRCUIT_BREAKER = 5;
+		SERVICES = 6;
+		reserved 7 to 11;
+	}
+
+	DiscoverRequestType type = 1;
+	Service service = 2;
+	reserved 3 to 4;
+}
+```
+
+DiscoverRequest 请求很简单，在服务发现的场景指定 type 为 INSTANCE，service 就是服务的基本信息。
+
+但是在具体实现上，Java-SDK 与 Golang-SDK 略有区别：
+
+![](./assets/polaris-service-discover-1.png)
+
+Java-SDK 发送的信息只有 service 和 namespace，而 Golang-SDK 多了一个 revision。看来 Java-SDK 的实现不如 Golang-SDK 完善，Golang-SDK 会传递当前的 revision，控制面如果对比与当前的一致，应该只返回个 DATA_NO_CHANGE 即可，不用返回实际的数据。
+
+
+
+## 1. 服务发现
+
+### 1.1 stream 处理循环
+
+服务发现调的 GRPC 方法是 `rpc Discover(stream DiscoverRequest) returns(stream DiscoverResponse)`。
+
+控制面收到请求后，对于 type 为 api.DiscoverRequest_INSTANC 的服务发现请求，处理逻辑位于 `service/client.go` 中的 `ServiceInstancesCache` 方法。
+
+
+
+
 
 
 
