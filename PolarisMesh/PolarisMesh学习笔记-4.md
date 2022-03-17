@@ -15,10 +15,6 @@ rpc Discover(stream DiscoverRequest) returns(stream DiscoverResponse) {}
 
 需要说明一下，本文仅分析服务发现的逻辑，而 PolarisMesh 将所有资源的定义都统一到了 Discover 这一个接口，其中资源还包含路由、熔断等这些规则。
 
-下面先从这两个 plugin 谈起。
-
-
-
 ### 0.1 ServerConnector & LocalRegistry
 
 PolarisMesh Java SDK 以 plugin 的形式管理 SDK 的各种功能，例如`ServerConnector`和`LocalRegistry`。其中  `ServerConnector` 的默认实现类是 `GrpcConnector`，主要提供了与控制面的连接维护以及交互逻辑；`LocalRegistry` 的默认实现类是 `InMemoryRegistry` 封装了资源的本地缓存逻辑，上面已经提到服务、实例和规则等在这里都抽象为资源。
@@ -43,7 +39,7 @@ PolarisMesh Java SDK 以 plugin 的形式管理 SDK 的各种功能，例如`Ser
 
 ![](./assets/polaris-javasdk-inmemoryregistry.png)
 
-`InMemoryRegistry`的主要逻辑就是维护“资源”的本地缓存，也就是 `resourceMap` 这个数据结构。与 `GrpcConnector` 之间的职责划分很明确，`GrpcConnector`负责与控制面交互，如果有资源变更那么通过注册的 `ServiceEventHandler`回调处理相应的`CacheObject`。
+`InMemoryRegistry` 的主要逻辑就是维护“资源”的本地缓存，也就是 `resourceMap` 这个数据结构。与 `GrpcConnector` 之间的职责划分很明确，`GrpcConnector`负责与控制面交互，如果有资源变更那么通过注册的 `ServiceEventHandler`回调处理相应的`CacheObject`。
 
 除此之外，`InMemoryRegistry`还负责触发 SERVICE_DISCOVER_CLUSTER 发现的任务，以及缓存持久化到本地文件和清理过期缓存的任务。
 
@@ -104,21 +100,16 @@ Java-SDK 发送的信息只有 service 和 namespace，而 Golang-SDK 多了一�
 
 ## 1. 服务发现
 
-### 1.1 stream 处理循环
-
 服务发现调的 GRPC 方法是 `rpc Discover(stream DiscoverRequest) returns(stream DiscoverResponse)`。
 
 控制面收到请求后，对于 type 为 api.DiscoverRequest_INSTANC 的服务发现请求，处理逻辑位于 `service/client.go` 中的 `ServiceInstancesCache` 方法。
 
+![](./assets/polaris-service-discover-2.png)
 
+逻辑很清晰，唯一需要解释的是 ServiceInstanceRevision，这个 revsion 不是数据库表中的字段，而是基于所有实例的信息计算出来的，用于判断服务的整体信息是否有变更。
 
+ServiceInstanceRevision 的计算也是在 cache 模块，在 cache 更新后向 `revisionCh`发一个信号，然后异步的的计算当前的 revision，感觉这个设计完全没必要，如果是担心占用太多计算资源，应该设计为批处理。
 
+## 3. 总结
 
-
-
-
-
-
-
-
-
+整体看下来，服务发现 SDK 的设计还是很不错，每个模块职责清晰。控制面的实现比较简单，应该尝试向 xDS 对齐一下。
