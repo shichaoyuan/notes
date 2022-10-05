@@ -1,6 +1,6 @@
 《Rust for Rustaceans》读书笔记
 
-—— 为什么设计 Rust 接口？
+—— 如何设计 Rust 接口？
 
 
 
